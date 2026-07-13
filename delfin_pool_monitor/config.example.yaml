@@ -1,0 +1,56 @@
+# Skopiuj ten plik jako config.yaml i uzupelnij swoimi danymi.
+# config.yaml jest w .gitignore - nie trafi do repozytorium (zawiera sekrety).
+
+tuya:
+  # Region centrum danych Tuya wybrany przy tworzeniu projektu w iot.tuya.com
+  # (Polska/Europa -> zazwyczaj "eu"). Mozliwe wartosci: eu, eu-w, us, us-e, cn, in, sg
+  api_region: "eu"
+
+  # Access ID/Client ID oraz Access Secret/Client Secret Twojego projektu
+  # Tuya IoT Platform (zakladka "Overview" projektu w iot.tuya.com).
+  access_id: "CHANGE_ME"
+  access_secret: "CHANGE_ME"
+
+  # ID urzadzenia "Delfin" znalezione w zakladce "Devices" projektu.
+  device_id: "CHANGE_ME"
+
+  # Ustaw na true zeby testowac aplikacje bez prawdziwego czujnika
+  # (generuje losowe, przykladowe odczyty).
+  mock: false
+
+  # Mapowanie parametrow na kody DPS (Tuya "data points") i wspolczynnik
+  # skalowania. Domyslne wartosci ponizej sa typowe dla tanich, tuya-owych
+  # sond basenowych (pH/CL/TDS/EC/SALT/ORP), ale MOGA sie roznic dla Twojego
+  # egzemplarza. Uruchom `python -m delfin_monitor discover`, porownaj surowe
+  # wartosci z tym co pokazuje aplikacja "Moj dom" i popraw ponizej w razie
+  # potrzeby (np. jesli aplikacja pokazuje pH 7.0, a discover pokaze
+  # ph_value=70, to scale ma wynosic 10).
+  dps_mapping:
+    ph: {code: "ph_value", scale: 10}
+    chlorine: {code: "cl_value", scale: 100}
+    temperature: {code: "temp_current", scale: 10}
+    tds: {code: "tds_value", scale: 1}
+    ec: {code: "ec_value", scale: 1}
+    salt: {code: "salt_value", scale: 1}
+    orp: {code: "orp_value", scale: 1}
+    battery: {code: "battery_percentage", scale: 1}
+
+thresholds:
+  ph_min: 7.0
+  ph_max: 7.4
+  chlorine_min: 0.1
+
+whatsapp:
+  enabled: true
+  provider: callmebot
+  # Numer telefonu w formacie miedzynarodowym, np. "+48600000000"
+  phone: "CHANGE_ME"
+  # Klucz otrzymany od bota CallMeBot (patrz README.md)
+  apikey: "CHANGE_ME"
+
+report:
+  time: "18:00"
+  timezone: "Europe/Warsaw"
+
+storage:
+  history_file: "data/history.jsonl"

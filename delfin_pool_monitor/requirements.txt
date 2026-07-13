@@ -1,0 +1,4 @@
+textual>=0.58
+tinytuya>=1.14
+requests>=2.31
+PyYAML>=6.0
