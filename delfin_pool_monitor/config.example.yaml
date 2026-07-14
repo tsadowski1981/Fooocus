@@ -29,7 +29,7 @@ tuya:
     ph: {code: "ph_value", scale: 10}
     chlorine: {code: "cl_value", scale: 100}
     temperature: {code: "temp_current", scale: 10}
-    tds: {code: "tds_value", scale: 1}
+    tds: {code: "tds_in", scale: 1}
     ec: {code: "ec_value", scale: 1}
     salt: {code: "salt_value", scale: 1}
     orp: {code: "orp_value", scale: 1}
