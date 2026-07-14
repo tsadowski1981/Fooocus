@@ -30,12 +30,26 @@ def _cmd_report(args: argparse.Namespace) -> int:
 def _cmd_discover(args: argparse.Namespace) -> int:
     config = load_config(args.config)
     client = get_sensor_client(config)
-    print("Surowe dane (DPS) z czujnika Delfin:\n")
-    for item in client.raw_status():
+
+    print("Surowe dane ze statusu (/status) czujnika Delfin:\n")
+    status_list = client.raw_status()
+    if not status_list:
+        print("  (brak)")
+    for item in status_list:
         print(f"  code={item.get('code')!r:30} value={item.get('value')!r}")
+
+    logs = client.raw_logs()
+    print(f"\nOstatnie wpisy z logow urzadzenia (/logs, ostatnie 48h, {len(logs)} wpisow):\n")
+    if not logs:
+        print("  (brak - albo urzadzenie nie wspiera tego endpointu, albo brak nowych zdarzen)")
+    for entry in logs[:40]:
+        print(f"  {entry!r}")
+
     print(
         "\nPorownaj powyzsze wartosci z tym co pokazuje aplikacja 'Moj dom' i "
-        "ustaw wlasciwe 'code' oraz 'scale' w config.yaml (sekcja tuya.dps_mapping)."
+        "ustaw wlasciwe 'code' oraz 'scale' w config.yaml (sekcja tuya.dps_mapping). "
+        "Jesli parametru brakuje w /status, ale jest w /logs, sprawdz pod jakim polem "
+        "(prawdopodobnie 'code') i jaka wartosc (prawdopodobnie 'value') sie tam pojawia."
     )
     return 0
 

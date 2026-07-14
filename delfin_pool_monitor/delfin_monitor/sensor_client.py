@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import random
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from .config import AppConfig
@@ -32,6 +32,10 @@ class SensorClient(ABC):
     def raw_status(self) -> list[dict[str, Any]]:
         """Return the raw status payload, for the `discover` command."""
         raise NotImplementedError
+
+    def raw_logs(self) -> list[dict[str, Any]]:
+        """Return recent raw data-point report log entries, if supported."""
+        return []
 
 
 class TuyaDelfinClient(SensorClient):
@@ -61,9 +65,34 @@ class TuyaDelfinClient(SensorClient):
         client = self._get_client()
         return client.get_device_status(self._config.tuya.device_id)
 
+    def raw_logs(self) -> list[dict[str, Any]]:
+        client = self._get_client()
+        now = datetime.now()
+        start = now - timedelta(hours=48)
+        return client.get_device_report_logs(
+            self._config.tuya.device_id,
+            start_time_ms=int(start.timestamp() * 1000),
+            end_time_ms=int(now.timestamp() * 1000),
+        )
+
+    def _combined_status(self) -> dict[str, Any]:
+        """Live /status values, filled in with the latest /logs value for any
+        code that /status doesn't currently report (some sensors on this
+        device only ever show up in the report log, not the status cache)."""
+        status_by_code = {item["code"]: item["value"] for item in self.raw_status()}
+        try:
+            logs = self.raw_logs()
+        except Exception:
+            logs = []
+        for entry in logs:
+            code = entry.get("code")
+            if not code or code in status_by_code:
+                continue
+            status_by_code[code] = entry.get("value")
+        return status_by_code
+
     def fetch_reading(self) -> SensorReading:
-        status_list = self.raw_status()
-        status_by_code = {item["code"]: item["value"] for item in status_list}
+        status_by_code = self._combined_status()
 
         values: dict[str, float | None] = {}
         for name in FIELD_NAMES:

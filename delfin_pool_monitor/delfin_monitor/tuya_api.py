@@ -88,3 +88,19 @@ class TuyaCloudClient:
         self._ensure_token()
         data = self._get(f"/v1.0/devices/{device_id}/status")
         return data["result"]
+
+    def get_device_report_logs(
+        self, device_id: str, start_time_ms: int, end_time_ms: int, size: int = 100
+    ) -> list[dict[str, Any]]:
+        """Recent data-point report events (same data the "Device Log" tab
+        in the Tuya console shows). Some devices only expose their less
+        frequently updated sensors here rather than via /status."""
+        self._ensure_token()
+        params = {
+            "start_time": start_time_ms,
+            "end_time": end_time_ms,
+            "size": size,
+            "type": "7",
+        }
+        data = self._get(f"/v1.0/devices/{device_id}/logs", params=params)
+        return data["result"].get("logs", [])
