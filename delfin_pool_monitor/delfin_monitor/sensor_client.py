@@ -19,6 +19,7 @@ from typing import Any
 
 from .config import AppConfig
 from .models import SensorReading
+from .tuya_api import TuyaCloudClient
 
 FIELD_NAMES = ["ph", "chlorine", "temperature", "tds", "ec", "salt", "orp", "battery"]
 
@@ -34,16 +35,14 @@ class SensorClient(ABC):
 
 
 class TuyaDelfinClient(SensorClient):
-    """Fetches the Delfin device's status via the Tuya Cloud API (tinytuya)."""
+    """Fetches the Delfin device's status via the Tuya Cloud API."""
 
     def __init__(self, config: AppConfig):
         self._config = config
-        self._client = None
+        self._client: TuyaCloudClient | None = None
 
-    def _get_client(self):
+    def _get_client(self) -> TuyaCloudClient:
         if self._client is None:
-            import tinytuya
-
             tuya = self._config.tuya
             if not (tuya.access_id and tuya.access_secret and tuya.device_id):
                 raise RuntimeError(
@@ -51,24 +50,16 @@ class TuyaDelfinClient(SensorClient):
                     "access_secret / device_id). Zobacz README.md, sekcja "
                     "'Podłączenie czujnika Delfin (Tuya)'."
                 )
-            self._client = tinytuya.Cloud(
-                apiRegion=tuya.api_region,
-                apiKey=tuya.access_id,
-                apiSecret=tuya.access_secret,
-                apiDeviceID=tuya.device_id,
+            self._client = TuyaCloudClient(
+                api_region=tuya.api_region,
+                access_id=tuya.access_id,
+                access_secret=tuya.access_secret,
             )
         return self._client
 
     def raw_status(self) -> list[dict[str, Any]]:
         client = self._get_client()
-        result = client.getstatus(self._config.tuya.device_id)
-        if isinstance(result, dict) and result.get("Error"):
-            raise RuntimeError(f"Blad odczytu z Tuya Cloud API: {result}")
-        if isinstance(result, dict) and "result" in result:
-            return result["result"]
-        if isinstance(result, list):
-            return result
-        raise RuntimeError(f"Nieoczekiwana odpowiedz z Tuya Cloud API: {result}")
+        return client.get_device_status(self._config.tuya.device_id)
 
     def fetch_reading(self) -> SensorReading:
         status_list = self.raw_status()
