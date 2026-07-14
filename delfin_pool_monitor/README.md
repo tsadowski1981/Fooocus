@@ -87,8 +87,48 @@ Doda wpis do crontab: `0 18 * * * ... python -m delfin_monitor report`.
 Logi trafiają do `data/cron.log`. Żeby usunąć wpis, edytuj `crontab -e`
 ręcznie.
 
-Komputer/serwer musi być włączony o 18:00, żeby cron zadziałał - jeśli
-uruchamiasz to na laptopie, rozważ Raspberry Pi lub serwerek domowy.
+Urządzenie, na którym to uruchomisz, musi być włączone i mieć internet o
+18:00, żeby cron zadziałał - np. komputer, Raspberry Pi, serwerek domowy albo
+telefon (patrz sekcja 5 poniżej).
+
+## 5. Uruchomienie na telefonie z Androidem (Termux)
+
+Telefon jest dobrym wyborem, bo masz go zawsze przy sobie i online. Nie
+używaj Termux z Google Play (nieaktualizowany) - zainstaluj z
+[F-Droid](https://f-droid.org/packages/com.termux/).
+
+1. Zainstaluj **Termux** i **Termux:Boot** (ta druga też z F-Droid - pozwala
+   uruchomić usługę automatycznie po restarcie telefonu).
+2. W Termux:
+   ```bash
+   pkg update && pkg upgrade
+   pkg install python git cronie
+   ```
+3. Skopiuj na telefon folder `delfin_pool_monitor/` (np. `git clone` Twojego
+   forka repo, albo `termux-setup-storage` i skopiowanie plików) i wykonaj
+   kroki 1-4 z tego README (venv, `pip install -r requirements.txt`,
+   `config.yaml`, CallMeBot).
+4. Uruchom scheduler i zainstaluj wpis crontab:
+   ```bash
+   crond
+   bash scripts/install_cron.sh
+   ```
+5. Żeby `crond` przeżył restart telefonu, dodaj jego start do Termux:Boot:
+   ```bash
+   mkdir -p ~/.termux/boot
+   cat > ~/.termux/boot/start-crond.sh <<'EOF'
+   #!/data/data/com.termux/files/usr/bin/sh
+   crond
+   EOF
+   chmod +x ~/.termux/boot/start-crond.sh
+   ```
+6. W ustawieniach systemowych telefonu wyłącz **optymalizację baterii** dla
+   Termux (Ustawienia → Aplikacje → Termux → Bateria → "Brak ograniczeń") -
+   inaczej Android może ubić proces `crond` w tle i raport o 18:00 się nie
+   wykona.
+7. Opcjonalnie zainstaluj też `pkg install termux-api` + apkę Termux:API,
+   jeśli chcesz kiedyś dodać natywne powiadomienia Android obok alarmów na
+   WhatsApp.
 
 ## 5. Interaktywny dashboard (TUI)
 
