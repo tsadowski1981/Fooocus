@@ -35,9 +35,10 @@ class Thresholds:
 
 
 @dataclass
-class WhatsAppConfig:
+class NotifyConfig:
     enabled: bool = False
-    provider: str = "callmebot"
+    provider: str = "ntfy"
+    ntfy_topic: str = ""
     phone: str = ""
     apikey: str = ""
 
@@ -57,7 +58,7 @@ class StorageConfig:
 class AppConfig:
     tuya: TuyaConfig = field(default_factory=TuyaConfig)
     thresholds: Thresholds = field(default_factory=Thresholds)
-    whatsapp: WhatsAppConfig = field(default_factory=WhatsAppConfig)
+    notify: NotifyConfig = field(default_factory=NotifyConfig)
     report: ReportConfig = field(default_factory=ReportConfig)
     storage: StorageConfig = field(default_factory=StorageConfig)
     base_dir: Path = field(default_factory=lambda: DEFAULT_CONFIG_PATH.parent)
@@ -68,12 +69,11 @@ class AppConfig:
 
 
 _DEFAULT_DPS_MAPPING = {
-    "ph": {"code": "ph_value", "scale": 10},
-    "chlorine": {"code": "cl_value", "scale": 100},
+    "ph": {"code": "ph", "scale": 10},
+    "chlorine": {"code": "cl_value", "scale": 10},
     "temperature": {"code": "temp_current", "scale": 10},
-    "tds": {"code": "tds_value", "scale": 1},
-    "ec": {"code": "ec_value", "scale": 1},
-    "salt": {"code": "salt_value", "scale": 1},
+    "tds": {"code": "tds_in", "scale": 1},
+    "ec": {"code": "conductivity_value", "scale": 1},
     "orp": {"code": "orp_value", "scale": 1},
     "battery": {"code": "battery_percentage", "scale": 1},
 }
@@ -88,7 +88,8 @@ def load_config(path: str | Path | None = None) -> AppConfig:
 
     Secrets can also be supplied via environment variables, which take
     precedence over the file: DELFIN_TUYA_ACCESS_ID, DELFIN_TUYA_ACCESS_SECRET,
-    DELFIN_TUYA_DEVICE_ID, DELFIN_CALLMEBOT_PHONE, DELFIN_CALLMEBOT_APIKEY.
+    DELFIN_TUYA_DEVICE_ID, DELFIN_NTFY_TOPIC, DELFIN_CALLMEBOT_PHONE,
+    DELFIN_CALLMEBOT_APIKEY.
     """
     cfg_path = Path(path) if path else DEFAULT_CONFIG_PATH
     data: dict[str, Any] = {}
@@ -120,12 +121,13 @@ def load_config(path: str | Path | None = None) -> AppConfig:
         chlorine_min=float(th_data.get("chlorine_min", 0.1)),
     )
 
-    wa_data = data.get("whatsapp", {}) or {}
-    whatsapp = WhatsAppConfig(
-        enabled=bool(wa_data.get("enabled", False)),
-        provider=wa_data.get("provider", "callmebot"),
-        phone=_env_override(wa_data.get("phone", ""), "DELFIN_CALLMEBOT_PHONE"),
-        apikey=_env_override(wa_data.get("apikey", ""), "DELFIN_CALLMEBOT_APIKEY"),
+    notify_data = data.get("notify", {}) or {}
+    notify = NotifyConfig(
+        enabled=bool(notify_data.get("enabled", False)),
+        provider=notify_data.get("provider", "ntfy"),
+        ntfy_topic=_env_override(notify_data.get("ntfy_topic", ""), "DELFIN_NTFY_TOPIC"),
+        phone=_env_override(notify_data.get("phone", ""), "DELFIN_CALLMEBOT_PHONE"),
+        apikey=_env_override(notify_data.get("apikey", ""), "DELFIN_CALLMEBOT_APIKEY"),
     )
 
     rep_data = data.get("report", {}) or {}
@@ -140,7 +142,7 @@ def load_config(path: str | Path | None = None) -> AppConfig:
     return AppConfig(
         tuya=tuya,
         thresholds=thresholds,
-        whatsapp=whatsapp,
+        notify=notify,
         report=report,
         storage=storage,
         base_dir=cfg_path.parent,

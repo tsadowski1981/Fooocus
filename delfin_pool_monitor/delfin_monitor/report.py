@@ -5,7 +5,7 @@ import logging
 
 from .config import AppConfig
 from .models import Alarm, AlarmLevel, ReportResult, SensorReading
-from .notifier import send_whatsapp
+from .notifier import send_notification
 from .sensor_client import get_sensor_client
 from .storage import append_history
 from .thresholds import evaluate
@@ -55,9 +55,9 @@ def run_daily_report(config: AppConfig) -> ReportResult:
     notified = False
     if any(a.level == AlarmLevel.ALARM for a in alarms):
         try:
-            send_whatsapp(config.whatsapp, text)
+            send_notification(config.notify, text)
             notified = True
         except Exception:
-            logger.exception("Nie udalo sie wyslac alarmu WhatsApp")
+            logger.exception("Nie udalo sie wyslac powiadomienia o alarmie")
 
     return ReportResult(reading=reading, alarms=alarms, text=text, notified=notified)

@@ -1,7 +1,7 @@
 """Interactive TUI dashboard (Textual) for the Delfin pool sensor.
 
-Keys: r = pobierz nowy odczyt i wykonaj pelny raport (zapis + alarm WhatsApp)
-      t = wyslij testowy alarm WhatsApp
+Keys: r = pobierz nowy odczyt i wykonaj pelny raport (zapis + powiadomienie)
+      t = wyslij testowe powiadomienie
       q = wyjdz
 """
 from __future__ import annotations
@@ -14,7 +14,7 @@ from textual.widgets import DataTable, Footer, Header, Static
 
 from .config import AppConfig
 from .models import AlarmLevel, ReportResult
-from .notifier import send_whatsapp
+from .notifier import send_notification
 from .report import run_daily_report
 from .storage import read_history
 
@@ -34,7 +34,7 @@ class DelfinApp(App):
 
     BINDINGS = [
         ("r", "refresh", "Nowy raport teraz"),
-        ("t", "test_alert", "Testowy alarm WhatsApp"),
+        ("t", "test_alert", "Testowe powiadomienie"),
         ("q", "quit", "Wyjdz"),
     ]
 
@@ -82,7 +82,7 @@ class DelfinApp(App):
         text = (
             f"Status: {result.status.value}  |  "
             f"Ostatni odczyt: {result.reading.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
-            + ("  |  Alarm WhatsApp wyslany" if result.notified else "")
+            + ("  |  Powiadomienie wyslane" if result.notified else "")
         )
         status_widget.update(f"[{style}]{text}[/]")
 
@@ -130,15 +130,15 @@ class DelfinApp(App):
 
     def _do_test_alert(self) -> None:
         try:
-            send_whatsapp(
-                self.config_obj.whatsapp,
+            send_notification(
+                self.config_obj.notify,
                 "Test alarmu z Delfin Pool Monitor - jesli to widzisz, dziala!",
             )
         except Exception as exc:  # noqa: BLE001
-            self.call_from_thread(self._show_error, f"Blad wysylki WhatsApp: {exc}")
+            self.call_from_thread(self._show_error, f"Blad wysylki powiadomienia: {exc}")
             return
         self.call_from_thread(
-            self.notify, "Wyslano testowy alarm WhatsApp.", title="OK"
+            self.notify, "Wyslano testowe powiadomienie.", title="OK"
         )
 
     def _show_error(self, message: str) -> None:

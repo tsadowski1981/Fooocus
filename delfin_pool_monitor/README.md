@@ -1,13 +1,14 @@
 # Delfin Pool Monitor
 
-Codzienny raport (18:00) i alarmy WhatsApp z czujnika basenowego **Delfin**
+Codzienny raport (18:00) i alarmy push z czujnika basenowego **Delfin**
 (widoczny w aplikacji "Moj dom" jako urządzenie Tuya z parametrami pH, CL,
-TDS, EC, SALT, ORP, temperatura, bateria).
+TDS, EC, ORP, temperatura, bateria).
 
 - Codziennie o 18:00 (przez cron) pobiera odczyt z czujnika, zapisuje go do
   historii i pokazuje raport.
 - Jeśli **pH** wyjdzie poza zakres **7.0-7.4** albo **chlor** spadnie poniżej
-  **0.1 mg/L** - wysyła alarm na WhatsApp (przez CallMeBot).
+  **0.1 mg/L** - wysyła alarm push (przez [ntfy.sh](https://ntfy.sh), albo
+  opcjonalnie na WhatsApp przez CallMeBot).
 - Interaktywny dashboard TUI (`delfin_monitor tui`) do podglądu na żywo i
   historii odczytów.
 
@@ -69,22 +70,48 @@ surowe `70`, stąd `scale: 10`).
 Zanim skonfigurujesz Tuya, możesz przetestować resztę aplikacji z
 przykładowymi danymi ustawiając `tuya.mock: true` w `config.yaml`.
 
-## 3. Alarmy na WhatsApp (CallMeBot)
+## 3. Alarmy push (ntfy.sh)
 
-1. Dodaj do kontaktów numer CallMeBot: **+34 644 59 71 36**.
-2. Wyślij do niego na WhatsApp wiadomość: `I allow callmebot to send me messages`.
-3. Bot odpowie wiadomością z Twoim osobistym `apikey`.
+Najprostsza opcja - bez zakładania konta, bez numeru telefonu:
+
+1. Zainstaluj apkę **ntfy** na telefonie ([F-Droid](https://f-droid.org/packages/io.heckel.ntfy/)
+   albo Google Play).
+2. Wymyśl unikalną, trudną do odgadnięcia nazwę "kanału" (np.
+   `delfin-basen-tsadowski-9f31`) - to jak hasło, kto zna nazwę, może czytać
+   Twoje powiadomienia, więc niech nie będzie oczywista.
+3. W apce ntfy kliknij **"+"** i subskrybuj dokładnie tę nazwę.
 4. Uzupełnij w `config.yaml`:
    ```yaml
-   whatsapp:
+   notify:
      enabled: true
-     phone: "+48XXXXXXXXX"   # Twój numer, format międzynarodowy
-     apikey: "TWOJ_APIKEY"
+     provider: ntfy
+     ntfy_topic: "delfin-basen-tsadowski-9f31"
    ```
 5. Przetestuj:
    ```bash
    python -m delfin_monitor test-alert
    ```
+   Powiadomienie powinno przyjść na telefon w kilka sekund.
+
+### Alternatywa: WhatsApp (CallMeBot)
+
+Jeśli wolisz alarm na WhatsApp zamiast osobnej apki:
+
+1. Dodaj do kontaktów numer CallMeBot: **+34 644 59 71 36** (w Kontaktach, nie
+   w WhatsAppie).
+2. Otwórz **WhatsApp** (nie SMS!) i wyszukaj ten kontakt tam, wewnątrz apki.
+3. Wyślij mu wiadomość: `I allow callmebot to send me messages` - upewnij się,
+   że pole wpisywania pokazuje "Wiadomość", a nie "SMS".
+4. Bot odpowie wiadomością z Twoim osobistym `apikey`.
+5. Uzupełnij w `config.yaml`:
+   ```yaml
+   notify:
+     enabled: true
+     provider: callmebot
+     phone: "+48XXXXXXXXX"   # Twój numer, format międzynarodowy
+     apikey: "TWOJ_APIKEY"
+   ```
+6. Przetestuj: `python -m delfin_monitor test-alert`
 
 ## 4. Codzienny raport o 18:00 (cron)
 
@@ -136,8 +163,8 @@ używaj Termux z Google Play (nieaktualizowany) - zainstaluj z
    inaczej Android może ubić proces `crond` w tle i raport o 18:00 się nie
    wykona.
 7. Opcjonalnie zainstaluj też `pkg install termux-api` + apkę Termux:API,
-   jeśli chcesz kiedyś dodać natywne powiadomienia Android obok alarmów na
-   WhatsApp.
+   jeśli chcesz kiedyś dodać natywne powiadomienia Android obok alarmów
+   push.
 
 ## 5. Interaktywny dashboard (TUI)
 
@@ -147,7 +174,7 @@ python -m delfin_monitor tui
 
 Skróty klawiszowe:
 - `r` - pobierz nowy odczyt, zapisz do historii, wyślij alarm jeśli trzeba
-- `t` - wyślij testowy alarm WhatsApp
+- `t` - wyślij testowe powiadomienie
 - `q` - wyjście
 
 ## Progi alarmowe
@@ -169,7 +196,7 @@ delfin_monitor/
   config.py         # wczytywanie config.yaml
   sensor_client.py  # klient Tuya Cloud API (+ tryb mock)
   thresholds.py     # ocena progów pH/chloru
-  notifier.py       # alarmy WhatsApp (CallMeBot)
+  notifier.py       # alarmy push (ntfy.sh / WhatsApp CallMeBot)
   storage.py        # historia odczytów (data/history.jsonl)
   report.py         # budowanie raportu + orkiestracja
   tui.py            # dashboard Textual

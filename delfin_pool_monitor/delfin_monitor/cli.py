@@ -2,7 +2,7 @@
 
     python -m delfin_monitor report       # fetch + evaluate + notify + save (for cron @ 18:00)
     python -m delfin_monitor discover     # dump raw Tuya DPS status, to configure config.yaml
-    python -m delfin_monitor test-alert   # send a test WhatsApp message via CallMeBot
+    python -m delfin_monitor test-alert   # send a test notification (ntfy.sh / WhatsApp)
     python -m delfin_monitor tui          # launch the interactive TUI dashboard
 """
 from __future__ import annotations
@@ -13,7 +13,7 @@ import sys
 from typing import Any
 
 from .config import load_config
-from .notifier import send_whatsapp
+from .notifier import send_notification
 from .report import run_daily_report
 from .sensor_client import get_sensor_client
 
@@ -22,8 +22,8 @@ def _cmd_report(args: argparse.Namespace) -> int:
     config = load_config(args.config)
     result = run_daily_report(config)
     print(result.text)
-    if result.alarms and not result.notified and config.whatsapp.enabled:
-        print("\nUWAGA: nie udalo sie wyslac alarmu WhatsApp - sprawdz logi.", file=sys.stderr)
+    if result.alarms and not result.notified and config.notify.enabled:
+        print("\nUWAGA: nie udalo sie wyslac alarmu - sprawdz logi.", file=sys.stderr)
         return 1
     return 0
 
@@ -69,16 +69,16 @@ def _cmd_discover(args: argparse.Namespace) -> int:
 
 def _cmd_test_alert(args: argparse.Namespace) -> int:
     config = load_config(args.config)
-    if not config.whatsapp.enabled:
+    if not config.notify.enabled:
         print(
-            "whatsapp.enabled=false w config.yaml - nic nie wyslano. "
-            "Ustaw enabled: true, phone i apikey, i sprobuj ponownie.",
+            "notify.enabled=false w config.yaml - nic nie wyslano. "
+            "Ustaw enabled: true i uzupelnij dane dostawcy, i sprobuj ponownie.",
             file=sys.stderr,
         )
         return 1
     message = args.message or "Test alarmu z Delfin Pool Monitor - jesli to widzisz, dziala!"
-    send_whatsapp(config.whatsapp, message)
-    print("Wyslano wiadomosc testowa WhatsApp.")
+    send_notification(config.notify, message)
+    print("Wyslano powiadomienie testowe.")
     return 0
 
 
@@ -103,7 +103,7 @@ def main(argv: list[str] | None = None) -> int:
     p_discover = sub.add_parser("discover", help="Pokaz surowe dane DPS z czujnika")
     p_discover.set_defaults(func=_cmd_discover)
 
-    p_test = sub.add_parser("test-alert", help="Wyslij testowy alarm WhatsApp")
+    p_test = sub.add_parser("test-alert", help="Wyslij testowe powiadomienie")
     p_test.add_argument("--message", default=None)
     p_test.set_defaults(func=_cmd_test_alert)
 

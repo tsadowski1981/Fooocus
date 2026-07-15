@@ -49,12 +49,18 @@ thresholds:
   ph_max: 7.4
   chlorine_min: 0.1
 
-whatsapp:
+notify:
   enabled: true
-  provider: callmebot
-  # Numer telefonu w formacie miedzynarodowym, np. "+48600000000"
+  # "ntfy" (Rekomendowane, zero kont/numerow - patrz README.md) albo
+  # "callmebot" (alarm na WhatsApp, wymaga numeru telefonu i apikey).
+  provider: ntfy
+
+  # Wymagane dla provider: ntfy - dowolna, unikalna nazwa "kanalu"
+  # (traktuj jak haslo - kto zna nazwe, moze czytac Twoje powiadomienia).
+  ntfy_topic: "CHANGE_ME"
+
+  # Wymagane tylko dla provider: callmebot
   phone: "CHANGE_ME"
-  # Klucz otrzymany od bota CallMeBot (patrz README.md)
   apikey: "CHANGE_ME"
 
 report:
