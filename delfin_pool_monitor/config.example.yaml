@@ -18,22 +18,31 @@ tuya:
   # (generuje losowe, przykladowe odczyty).
   mock: false
 
-  # Mapowanie parametrow na kody DPS (Tuya "data points") i wspolczynnik
-  # skalowania. Domyslne wartosci ponizej sa typowe dla tanich, tuya-owych
-  # sond basenowych (pH/CL/TDS/EC/SALT/ORP), ale MOGA sie roznic dla Twojego
-  # egzemplarza. Uruchom `python -m delfin_monitor discover`, porownaj surowe
-  # wartosci z tym co pokazuje aplikacja "Moj dom" i popraw ponizej w razie
-  # potrzeby (np. jesli aplikacja pokazuje pH 7.0, a discover pokaze
-  # ph_value=70, to scale ma wynosic 10).
+  # WAZNE: przez Cloud API domyslnie widac tylko czesc parametrow (tzw.
+  # "Standard Instruction" tryb projektu w iot.tuya.com pokazuje jedynie
+  # tds_in/temp_current/battery_percentage). Zeby zobaczyc reszte (ph,
+  # cl_value, orp_value, conductivity_value), w konsoli Tuya wejdz w
+  # projekt -> Devices -> Debug Device -> Device Debugging -> link obok
+  # "Control Device with Standard" -> wybierz tryb "DP Instruction" i
+  # zapisz. Dopiero potem `python -m delfin_monitor discover` pokaze
+  # wszystkie kody.
+  #
+  # Ponizsze wartosci potwierdzono na prawdziwym urzadzeniu (Delfin, Tuya
+  # produkt "szjcy" / "Water quality detector"). Jesli masz inny model,
+  # uruchom `discover` i porownaj z aplikacja "Moj dom" - Tuya przechowuje
+  # liczby dziesietne jako liczby calkowite (np. pH 7.0 -> raw 70 -> scale
+  # 10; chlor 0.2 mg/L -> raw 2 -> scale 10).
   dps_mapping:
-    ph: {code: "ph_value", scale: 10}
-    chlorine: {code: "cl_value", scale: 100}
+    ph: {code: "ph", scale: 10}
+    chlorine: {code: "cl_value", scale: 10}
     temperature: {code: "temp_current", scale: 10}
     tds: {code: "tds_in", scale: 1}
-    ec: {code: "ec_value", scale: 1}
-    salt: {code: "salt_value", scale: 1}
+    ec: {code: "conductivity_value", scale: 1}
     orp: {code: "orp_value", scale: 1}
     battery: {code: "battery_percentage", scale: 1}
+    # "salt" nie jest osobnym DP na tym urzadzeniu (aplikacja najpewniej
+    # wylicza je z conductivity_value) - zostaw bez mapowania, zawsze
+    # bedzie "brak danych" w raporcie.
 
 thresholds:
   ph_min: 7.0

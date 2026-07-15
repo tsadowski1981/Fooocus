@@ -44,6 +44,15 @@ Delfin jest urządzeniem Tuya, więc dane pobieramy przez oficjalne API Tuya
    `tuya.access_secret`).
 5. W zakładce **Devices** znajdź urządzenie "Delfin" i skopiuj jego
    **Device ID** do `config.yaml` (`tuya.device_id`).
+6. **Kluczowy krok**: domyślnie projekt Tuya udostępnia przez Cloud API
+   tylko okrojony, "ujednolicony" zestaw parametrów (u nas: tylko
+   temperatura/TDS/bateria - bez pH i chloru!). Żeby zobaczyć wszystkie
+   surowe DP-sy urządzenia, wejdź w **Devices → (wiersz "Delfin") → Debug
+   Device → zakładka "Device Debugging"**, znajdź link obok napisu
+   "Control Device with Standard" (otwiera stronę "Configure Control
+   Instruction Mode"), wybierz kartę **"DP Instruction"** zamiast
+   "Standard Instruction" i zapisz. Bez tego kroku `discover` pokaże tylko
+   niepełny zestaw danych.
 
 Następnie sprawdź, jakie dokładnie dane (kody DPS) zwraca Twój egzemplarz:
 
