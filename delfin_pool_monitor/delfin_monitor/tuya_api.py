@@ -100,7 +100,10 @@ class TuyaCloudClient:
             "start_time": start_time_ms,
             "end_time": end_time_ms,
             "size": size,
-            "type": "7",
+            # 1..7: device online/offline/dev-change/automation/scene/command/dp-report.
+            # Ask for everything - we don't know in advance which type this
+            # device's less-common sensors (pH, chlorine, ...) get logged under.
+            "type": "1,2,3,4,5,6,7",
         }
         data = self._get(f"/v1.0/devices/{device_id}/logs", params=params)
         return data["result"].get("logs", [])

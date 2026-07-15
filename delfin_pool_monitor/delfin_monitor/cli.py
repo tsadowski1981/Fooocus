@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+from typing import Any
 
 from .config import load_config
 from .notifier import send_whatsapp
@@ -39,9 +40,21 @@ def _cmd_discover(args: argparse.Namespace) -> int:
         print(f"  code={item.get('code')!r:30} value={item.get('value')!r}")
 
     logs = client.raw_logs()
-    print(f"\nOstatnie wpisy z logow urzadzenia (/logs, ostatnie 48h, {len(logs)} wpisow):\n")
+    print(f"\nPobrano {len(logs)} wpisow z logow urzadzenia (/logs, ostatnie 48h).")
     if not logs:
         print("  (brak - albo urzadzenie nie wspiera tego endpointu, albo brak nowych zdarzen)")
+
+    codes_seen: dict[str, dict[str, Any]] = {}
+    for entry in logs:
+        code = entry.get("code")
+        if code and code not in codes_seen:
+            codes_seen[code] = entry
+
+    print(f"\nUnikalne kody widoczne w calej paczce {len(logs)} wpisow ({len(codes_seen)} kodow):\n")
+    for code, entry in sorted(codes_seen.items()):
+        print(f"  code={code!r:30} przykladowa wartosc={entry.get('value')!r}")
+
+    print("\nOstatnie (do 40) surowe wpisy /logs:\n")
     for entry in logs[:40]:
         print(f"  {entry!r}")
 
