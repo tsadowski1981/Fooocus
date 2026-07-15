@@ -6,6 +6,7 @@ import logging
 from .config import AppConfig
 from .models import Alarm, AlarmLevel, ReportResult, SensorReading
 from .notifier import send_notification
+from .pump import maybe_run_chlorine_pump
 from .sensor_client import get_sensor_client
 from .storage import append_history
 from .thresholds import evaluate
@@ -19,7 +20,9 @@ def _fmt(value: float | None, unit: str, decimals: int = 2) -> str:
     return f"{value:.{decimals}f} {unit}"
 
 
-def build_report_text(reading: SensorReading, alarms: list[Alarm], config: AppConfig) -> str:
+def build_report_text(
+    reading: SensorReading, alarms: list[Alarm], config: AppConfig, pump_activated: bool = False
+) -> str:
     status = "ALARM" if any(a.level == AlarmLevel.ALARM for a in alarms) else "OK"
     lines = [
         f"Raport basenu Delfin - {reading.timestamp.strftime('%Y-%m-%d %H:%M')}",
@@ -41,6 +44,12 @@ def build_report_text(reading: SensorReading, alarms: list[Alarm], config: AppCo
         lines.append("Alarmy:")
         for alarm in alarms:
             lines.append(f"  [{alarm.level.value}] {alarm.message}")
+    if pump_activated:
+        lines.append("")
+        lines.append(
+            f"Chlor ponizej {config.pump.on_below:.2f} mg/L - "
+            f"URUCHOMIONO POMPKE CHLORU na {config.pump.run_seconds}s."
+        )
     return "\n".join(lines)
 
 
@@ -48,16 +57,25 @@ def run_daily_report(config: AppConfig) -> ReportResult:
     client = get_sensor_client(config)
     reading = client.fetch_reading()
     alarms = evaluate(reading, config.thresholds)
-    text = build_report_text(reading, alarms, config)
+
+    pump_activated = False
+    try:
+        pump_activated = maybe_run_chlorine_pump(config, reading)
+    except Exception:
+        logger.exception("Nie udalo sie uruchomic pompki chloru")
+
+    text = build_report_text(reading, alarms, config, pump_activated)
 
     append_history(config.history_path(), reading, alarms)
 
     notified = False
-    if any(a.level == AlarmLevel.ALARM for a in alarms):
+    if any(a.level == AlarmLevel.ALARM for a in alarms) or pump_activated:
         try:
             send_notification(config.notify, text)
             notified = True
         except Exception:
             logger.exception("Nie udalo sie wyslac powiadomienia o alarmie")
 
-    return ReportResult(reading=reading, alarms=alarms, text=text, notified=notified)
+    return ReportResult(
+        reading=reading, alarms=alarms, text=text, notified=notified, pump_activated=pump_activated
+    )

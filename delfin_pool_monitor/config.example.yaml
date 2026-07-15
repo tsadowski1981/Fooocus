@@ -63,6 +63,29 @@ notify:
   phone: "CHANGE_ME"
   apikey: "CHANGE_ME"
 
+pump:
+  # Automatyczne uruchomienie inteligentnego gniazdka "Pompka chlor" (Tuya),
+  # gdy chlor spadnie ponizej krytycznego poziomu. To INNY prog niz
+  # thresholds.chlorine_min - najpierw dostajesz alarm (chlorine_min),
+  # dopiero przy nizszym poziomie (on_below) pompka wlacza sie sama.
+  enabled: false
+
+  # Device ID gniazdka "Pompka chlor" - zakladka Devices w iot.tuya.com
+  # (albo `python -m delfin_monitor discover --device-id <id>`, zeby
+  # potwierdzic kody switch_code/countdown_code dla Twojego urzadzenia -
+  # ponizsze sa typowe dla prostych gniazdek Tuya, ale sprawdz).
+  device_id: "CHANGE_ME"
+  switch_code: "switch_1"
+
+  # Nazwa DP dla wbudowanego countdown/timera (sekundy) - jesli urzadzenie
+  # go wspiera (gniazdka Tuya czesto maja "Timer" w apce), pompka sama sie
+  # wylaczy po run_seconds bez dodatkowej logiki po naszej stronie. Ustaw
+  # na "" jesli urzadzenie tego nie wspiera (wtedy trzeba wylaczyc recznie).
+  countdown_code: "countdown_1"
+  run_seconds: 300
+
+  on_below: 0.09
+
 report:
   time: "18:00"
   timezone: "Europe/Warsaw"

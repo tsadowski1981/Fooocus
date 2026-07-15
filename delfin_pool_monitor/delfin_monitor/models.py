@@ -69,6 +69,7 @@ class ReportResult:
     alarms: list[Alarm]
     text: str
     notified: bool = False
+    pump_activated: bool = False
 
     @property
     def status(self) -> AlarmLevel:

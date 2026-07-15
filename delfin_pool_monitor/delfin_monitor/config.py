@@ -44,6 +44,19 @@ class NotifyConfig:
 
 
 @dataclass
+class PumpConfig:
+    enabled: bool = False
+    device_id: str = ""
+    switch_code: str = "switch_1"
+    # Optional: name of a countdown DP (seconds) to auto-shutoff the pump.
+    # Leave empty to skip sending it (pump stays on until turned off some
+    # other way - e.g. the device's own dosing/schedule logic).
+    countdown_code: str = "countdown_1"
+    run_seconds: int = 300
+    on_below: float = 0.09
+
+
+@dataclass
 class ReportConfig:
     time: str = "18:00"
     timezone: str = "Europe/Warsaw"
@@ -59,6 +72,7 @@ class AppConfig:
     tuya: TuyaConfig = field(default_factory=TuyaConfig)
     thresholds: Thresholds = field(default_factory=Thresholds)
     notify: NotifyConfig = field(default_factory=NotifyConfig)
+    pump: PumpConfig = field(default_factory=PumpConfig)
     report: ReportConfig = field(default_factory=ReportConfig)
     storage: StorageConfig = field(default_factory=StorageConfig)
     base_dir: Path = field(default_factory=lambda: DEFAULT_CONFIG_PATH.parent)
@@ -130,6 +144,16 @@ def load_config(path: str | Path | None = None) -> AppConfig:
         apikey=_env_override(notify_data.get("apikey", ""), "DELFIN_CALLMEBOT_APIKEY"),
     )
 
+    pump_data = data.get("pump", {}) or {}
+    pump = PumpConfig(
+        enabled=bool(pump_data.get("enabled", False)),
+        device_id=_env_override(pump_data.get("device_id", ""), "DELFIN_PUMP_DEVICE_ID"),
+        switch_code=pump_data.get("switch_code", "switch_1"),
+        countdown_code=pump_data.get("countdown_code", "countdown_1"),
+        run_seconds=int(pump_data.get("run_seconds", 300)),
+        on_below=float(pump_data.get("on_below", 0.09)),
+    )
+
     rep_data = data.get("report", {}) or {}
     report = ReportConfig(
         time=rep_data.get("time", "18:00"),
@@ -143,6 +167,7 @@ def load_config(path: str | Path | None = None) -> AppConfig:
         tuya=tuya,
         thresholds=thresholds,
         notify=notify,
+        pump=pump,
         report=report,
         storage=storage,
         base_dir=cfg_path.parent,

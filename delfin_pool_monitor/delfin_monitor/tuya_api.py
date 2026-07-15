@@ -41,8 +41,16 @@ class TuyaCloudClient:
         self._access_token = ""
         self._token_expire_at_ms = 0
 
-    def _sign(self, method: str, path: str, params: dict[str, Any] | None, token: str) -> tuple[str, str]:
-        content_sha256 = hashlib.sha256(b"").hexdigest()
+    def _sign(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any] | None,
+        body: dict[str, Any] | None,
+        token: str,
+    ) -> tuple[str, str]:
+        body_bytes = json.dumps(body).encode("utf8") if body else b""
+        content_sha256 = hashlib.sha256(body_bytes).hexdigest()
         query = ""
         if params:
             keys = sorted(params.keys())
@@ -57,9 +65,16 @@ class TuyaCloudClient:
         )
         return sign, t
 
-    def _get(self, path: str, params: dict[str, Any] | None = None, authed: bool = True) -> dict[str, Any]:
+    def _request(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any] | None = None,
+        body: dict[str, Any] | None = None,
+        authed: bool = True,
+    ) -> dict[str, Any]:
         token = self._access_token if authed else ""
-        sign, t = self._sign("GET", path, params, token)
+        sign, t = self._sign(method, path, params, body, token)
         headers = {
             "client_id": self.access_id,
             "sign": sign,
@@ -68,12 +83,20 @@ class TuyaCloudClient:
         }
         if authed:
             headers["access_token"] = self._access_token
-        response = requests.get(f"{self.endpoint}{path}", params=params, headers=headers, timeout=15)
+        response = requests.request(
+            method, f"{self.endpoint}{path}", params=params, json=body, headers=headers, timeout=15
+        )
         response.raise_for_status()
         data = response.json()
         if not data.get("success"):
             raise TuyaApiError(f"Tuya API error calling {path}: {json.dumps(data, ensure_ascii=False)}")
         return data
+
+    def _get(self, path: str, params: dict[str, Any] | None = None, authed: bool = True) -> dict[str, Any]:
+        return self._request("GET", path, params=params, authed=authed)
+
+    def _post(self, path: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
+        return self._request("POST", path, body=body)
 
     def _ensure_token(self) -> None:
         now_ms = int(time.time() * 1000)
@@ -107,3 +130,8 @@ class TuyaCloudClient:
         }
         data = self._get(f"/v1.0/devices/{device_id}/logs", params=params)
         return data["result"].get("logs", [])
+
+    def send_command(self, device_id: str, commands: list[dict[str, Any]]) -> None:
+        """Send DP commands to a device, e.g. [{"code": "switch_1", "value": True}]."""
+        self._ensure_token()
+        self._post(f"/v1.0/devices/{device_id}/commands", body={"commands": commands})

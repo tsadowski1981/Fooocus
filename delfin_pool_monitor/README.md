@@ -11,6 +11,8 @@ TDS, EC, ORP, temperatura, bateria).
   opcjonalnie na WhatsApp przez CallMeBot).
 - Interaktywny dashboard TUI (`delfin_monitor tui`) do podglądu na żywo i
   historii odczytów.
+- Opcjonalnie: gdy chlor spadnie poniżej **0.09 mg/L**, automatycznie
+  włącza inteligentne gniazdko Tuya sterujące pompką dozującą chlor.
 
 ## 1. Instalacja
 
@@ -113,6 +115,47 @@ Jeśli wolisz alarm na WhatsApp zamiast osobnej apki:
    ```
 6. Przetestuj: `python -m delfin_monitor test-alert`
 
+## 3b. Automatyczna pompka chloru (opcjonalne)
+
+Jeśli masz osobne inteligentne gniazdko Tuya sterujące pompką dozującą
+chlor (np. nazwane "Pompka chlor" w apce "Moj dom"), aplikacja może je
+**włączyć automatycznie**, gdy chlor spadnie poniżej krytycznego poziomu
+(domyślnie **0.09 mg/L** - niżej niż zwykły alarm na 0.1, więc najpierw
+dostajesz powiadomienie, a dopiero przy dalszym spadku pompka rusza sama).
+
+1. W [iot.tuya.com](https://iot.tuya.com), w tej samej zakładce **Devices**,
+   znajdź na liście gniazdko (np. "Pompka chlor") i skopiuj jego **Device ID**.
+2. Sprawdź jego kody DP (nazwa przełącznika, opcjonalny timer):
+   ```bash
+   python -m delfin_monitor discover --device-id <DEVICE_ID_POMPKI>
+   ```
+   Dla zwykłych gniazdek Tuya to zwykle `switch_1` (włącz/wyłącz) i
+   `countdown_1` (wbudowany timer w sekundach, jeśli apka pokazuje ikonę
+   "Timer" przy tym urządzeniu).
+3. Uzupełnij w `config.yaml`:
+   ```yaml
+   pump:
+     enabled: true
+     device_id: "DEVICE_ID_POMPKI"
+     switch_code: "switch_1"
+     countdown_code: "countdown_1"   # "" jesli urzadzenie nie ma timera
+     run_seconds: 300                 # ile sekund ma pracowac pompka
+     on_below: 0.09
+   ```
+4. Przetestuj **ręcznie** (bez czekania, aż chlor faktycznie spadnie):
+   ```bash
+   python -m delfin_monitor pump-test
+   ```
+   Sprawdź w apce "Moj dom", czy gniazdko się włączyło (i wyłączyło po
+   `run_seconds`, jeśli ustawiony jest `countdown_code`).
+
+**Uwaga bezpieczeństwa**: to steruje prawdziwym dozowaniem chemii do
+basenu. `run_seconds` powinno być na tyle krótkie, żeby pojedyncze
+uruchomienie nie przedawkowało chloru - dobierz tę wartość do wydajności
+Twojej pompki. Jeśli `countdown_code` nie jest ustawiony/wspierany przez
+urządzenie, pompka zostanie włączona i **nie wyłączy się sama** - musisz
+to zrobić ręcznie w apce.
+
 ## 4. Codzienny raport o 18:00 (cron)
 
 ```bash
@@ -192,12 +235,14 @@ thresholds:
 
 ```
 delfin_monitor/
-  cli.py            # komendy: report / discover / test-alert / tui
+  cli.py            # komendy: report / discover / test-alert / pump-test / tui
   config.py         # wczytywanie config.yaml
-  sensor_client.py  # klient Tuya Cloud API (+ tryb mock)
-  thresholds.py     # ocena progów pH/chloru
+  tuya_api.py       # niskopoziomowy klient Tuya Cloud API (HMAC, bez zaleznosci)
+  sensor_client.py  # klient odczytow Tuya Cloud API (+ tryb mock)
+  pump.py           # automatyczne wlaczanie pompki chloru
+  thresholds.py     # ocena progow pH/chloru
   notifier.py       # alarmy push (ntfy.sh / WhatsApp CallMeBot)
-  storage.py        # historia odczytów (data/history.jsonl)
+  storage.py        # historia odczytow (data/history.jsonl)
   report.py         # budowanie raportu + orkiestracja
   tui.py            # dashboard Textual
 tests/              # pytest - progi, klient, raport
